@@ -88,9 +88,15 @@ def flat_wedge_profile(params: Ring2019Params, first_wedge: int, n_wedges: int=4
     return profile
 
 def site_spatial_profile(params: Ring2019Params, site_rois: Sequence[int], profile: str='plateau') -> np.ndarray:
-    """Map a 16-ROI site to 32-wedge nodes; site (3,4) -> wedges 6-9."""
-    rois = tuple((int(i) % 16 for i in site_rois))
-    first_wedge = min(rois) * 2
+    """Map a contiguous ROI block to 32 wedges, including the 15 -> 0 boundary."""
+    rois = tuple(int(i) % 16 for i in site_rois)
+    roi_set = set(rois)
+    if not rois or len(roi_set) != len(rois):
+        raise ValueError('site_rois must be nonempty and contain no duplicates.')
+    starts = [r for r in rois if (r - 1) % 16 not in roi_set]
+    if len(starts) != 1:
+        raise ValueError('site_rois must form one contiguous block smaller than the full ring.')
+    first_wedge = starts[0] * 2
     n_wedges = 2 * len(rois)
     if profile == 'flat':
         return flat_wedge_profile(params, first_wedge, n_wedges)
